@@ -8,18 +8,34 @@ import os
 from wand.image import Image
 from wand import exceptions
 
+ORIENTATION_TO_ROTATION = {
+	"8": 270,
+	"3": 180,
+	"6": 90
+}
+
 def main(source_dir, output_dir, max_width, max_height):
 	for root, dirs, files in os.walk(source_dir):
 		for file in files:
+			if file.startswith("."):
+				continue
 			file_path = os.path.join(root, file)
 			try:
 				format_file(file_path=file_path, output_dir=output_dir,
 					max_width=max_width, max_height=max_height)
-			except exceptions.TypeError, e:
-				pass
+			except (exceptions.TypeError, exceptions.MissingDelegateError, exceptions.BlobError), e:
+				print "Error with %s: %s" % (file_path, e)
 
 def format_file(file_path, output_dir, max_width, max_height):
 	with Image(filename=file_path).clone() as img:
+		orientation = 1
+		for key, value in img.metadata.items():
+			if key.lower() == "exif:orientation":
+				orientation = value
+
+		if orientation in ORIENTATION_TO_ROTATION:
+			img.rotate(ORIENTATION_TO_ROTATION[orientation])
+
 		original_width, original_height = img.size
 		ratio = float(original_width) / float(original_height)
 
@@ -32,7 +48,7 @@ def format_file(file_path, output_dir, max_width, max_height):
 
 		img.resize(math.trunc(new_width), math.trunc(new_height))
 		img.format = "jpeg"
-		new_file = file_path.replace(os.sep, "_").replace(".", "_") + ".jpg"
+		new_file = file_path.replace(os.sep, "").replace(".", "").replace(" ", "") + ".jpg"
 		img.save(filename=os.path.join(output_dir, new_file))
 
 
