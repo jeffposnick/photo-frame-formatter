@@ -56,3 +56,6 @@ docs/_build/
 .httplib2_cache/
 
 *.ttf
+client_secrets.json
+
+formatter.py-oauth2.json
